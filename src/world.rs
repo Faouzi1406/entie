@@ -1,4 +1,6 @@
-use crate::entity::Entity;
+use std::{borrow::BorrowMut, slice::Iter};
+
+use crate::{component::ComponentVec, entity::Entity};
 
 pub struct World {
     entities_count: usize,
@@ -23,6 +25,18 @@ impl World {
         Entity::new(id, self)
     }
 
+    fn borrow_component_vec<ComponentType: 'static>(&self) -> Option<&Vec<Option<ComponentType>>> {
+        for component_vec in self.components.iter() {
+            if let Some(component_vec) = component_vec
+                .as_any()
+                .downcast_mut::<Vec<Option<ComponentType>>>()
+            {
+                return Some(&component_vec);
+            };
+        }
+        None
+    }
+
     pub(crate) fn add_component<ComponentType: 'static>(
         &mut self,
         entity: usize,
@@ -30,7 +44,7 @@ impl World {
     ) {
         for component_vec in &mut self.components {
             if let Some(component_vec) = component_vec
-                .as_any_mut()
+                .as_any()
                 .downcast_mut::<Vec<Option<ComponentType>>>()
             {
                 component_vec[entity] = Some(component);
@@ -46,11 +60,10 @@ impl World {
         self.components.push(Box::new(new_components_vec))
     }
 
-    pub fn query<ComponentType: 'static>(
-        &self,
-        query: dyn Into<&[ComponentType]>,
-    ) -> Box<dyn Iterator<Item = ComponentType>> {
-        for v in self.components.iter().flatten();
-        todo!("query")
+    pub fn query<Query>(&self) -> Option<Box<dyn Iterator<Item = Query>>> {
+        if let Some(component_vec) = self.borrow_component_vec::<Query>() {
+            for component in  component_vec.iter().filter_map(|q| q.as_ref());
+        };
+        None
     }
 }
